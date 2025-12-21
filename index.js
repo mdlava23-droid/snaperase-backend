@@ -1,12 +1,7 @@
-const express = require("express");
-const app = express();
+const PORT = process.env.PORT;
 
-app.get("/", (req, res) => {
-  res.send("API is running");
-});
+if (!PORT) {
+  console.error("PORT not found");
+  process.exit(1);
+}
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
