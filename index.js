@@ -1,15 +1,12 @@
-{
-  "name": "snaperase-backend",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "multer": "^1.4.5"
-  },
-  "engines": {
-    "node": "18.x"
-  }
-}
+const express = require("express");
+const app = express();
+
+const PORT = process.env.PORT || 10000;
+
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
