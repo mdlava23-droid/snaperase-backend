@@ -10,3 +10,12 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+
+app.post("/upload", upload.single("image"), (req, res) => {
+  return res.json({
+    success: true,
+    file: req.file
+  });
+});
