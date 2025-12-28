@@ -1,49 +1,38 @@
 const express = require('express');
 const axios = require('axios');
-const FormData = require('form-data');
 const cors = require('cors');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
-
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-// Health check route
-app.get('/', (req, res) => {
-    res.send('Snaperase Backend is running...');
-});
+const REMOVE_BG_API_KEY = 'Aq7XeszJtMZdmZJ1WCLLwYpb';
 
-// Image processing route
-app.post('/process-image', async (req, res) => {
-    const { image_url, is_premium } = req.body;
-
-    if (!image_url) {
-        return res.status(400).json({ success: false, message: "Image URL is required" });
-    }
-
+app.post('/remove-bg', async (req, res) => {
     try {
-        // This is a placeholder for the background removal logic
-        // For production, you can integrate services like remove.bg or local AI models
-        const processedImage = image_url; 
+        const { image } = req.body; // Base64 image
+        const formData = new FormData();
+        formData.append('size', 'auto');
+        formData.append('image_file_b64', image);
 
-        res.json({
-            success: true,
-            processed_image: processedImage,
-            watermark: is_premium === true ? false : true,
-            quality: is_premium === true ? "1K" : "Standard"
+        const response = await axios.post('https://api.remove.bg/v1.0/removebg', formData, {
+            headers: {
+                ...formData.getHeaders(),
+                'X-Api-Key': REMOVE_BG_API_KEY,
+            },
+            responseType: 'arraybuffer',
         });
+
+        const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+        res.json({ image: base64Image });
     } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            message: "Error during image processing",
-            error: error.message 
-        });
+        console.error('Error removing background:', error.message);
+        res.status(500).json({ error: 'Failed to remove background' });
     }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
