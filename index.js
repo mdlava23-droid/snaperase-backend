@@ -11,16 +11,17 @@ app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Replace with your actual Remove.bg API Key
-const REMOVE_BG_API_KEY = 'YOUR_API_KEY_HERE';
+// Your official Remove.bg API Key
+const REMOVE_BG_API_KEY = 'hGteSUnvSnqfX6v1D1qW2p1x';
 
 app.post('/process-image', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).send('No image uploaded.');
 
+        // This value comes from the frontend after payment verification
         const isPremium = req.body.isPremium === 'true';
 
-        // 1. Remove Background
+        // 1. Send image to Remove.bg API
         const formData = new FormData();
         formData.append('image_file', req.file.buffer, req.file.originalname);
         formData.append('size', 'auto');
@@ -35,7 +36,7 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 
         let imageProcessor = sharp(response.data);
 
-        // 2. 4K AI Enhancement Logic for Premium Users
+        // 2. Apply 4K AI Enhancement for Premium Users
         if (isPremium) {
             imageProcessor = imageProcessor
                 .resize(3840, null, { 
@@ -52,7 +53,7 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
                     saturation: 1.1
                 });
         } else {
-            // Standard Resolution for Free Users
+            // Standard resolution for Free users
             imageProcessor = imageProcessor.resize(1280);
         }
 
@@ -62,10 +63,10 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
         res.send(finalBuffer);
 
     } catch (error) {
-        console.error("Processing Error:", error);
+        console.error("AI Processing Error:", error.message);
         res.status(500).send('Image processing failed.');
     }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Backend server active on port ${PORT}`));
