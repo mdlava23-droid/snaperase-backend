@@ -1,21 +1,29 @@
 const express = require('express');
+const multer = require('multer');
 const axios = require('axios');
-const cors = require('cors');
 const FormData = require('form-data');
-require('dotenv').config();
+const sharp = require('sharp');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 
-const REMOVE_BG_API_KEY = 'Aq7XeszJtMZdmZJ1WCLLwYpb';
+const upload = multer({ storage: multer.memoryStorage() });
 
-app.post('/remove-bg', async (req, res) => {
+// Replace with your actual Remove.bg API Key
+const REMOVE_BG_API_KEY = 'YOUR_API_KEY_HERE';
+
+app.post('/process-image', upload.single('image'), async (req, res) => {
     try {
-        const { image } = req.body; // Base64 image
+        if (!req.file) return res.status(400).send('No image uploaded.');
+
+        const isPremium = req.body.isPremium === 'true';
+
+        // 1. Remove Background
         const formData = new FormData();
+        formData.append('image_file', req.file.buffer, req.file.originalname);
         formData.append('size', 'auto');
-        formData.append('image_file_b64', image);
 
         const response = await axios.post('https://api.remove.bg/v1.0/removebg', formData, {
             headers: {
@@ -25,14 +33,39 @@ app.post('/remove-bg', async (req, res) => {
             responseType: 'arraybuffer',
         });
 
-        const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-        res.json({ image: base64Image });
+        let imageProcessor = sharp(response.data);
+
+        // 2. 4K AI Enhancement Logic for Premium Users
+        if (isPremium) {
+            imageProcessor = imageProcessor
+                .resize(3840, null, { 
+                    withoutEnlargement: false,
+                    fit: 'inside'
+                })
+                .sharpen({ 
+                    sigma: 1.5,
+                    m1: 0.5,
+                    m2: 10
+                })
+                .modulate({
+                    brightness: 1.05,
+                    saturation: 1.1
+                });
+        } else {
+            // Standard Resolution for Free Users
+            imageProcessor = imageProcessor.resize(1280);
+        }
+
+        const finalBuffer = await imageProcessor.toBuffer();
+        
+        res.set('Content-Type', 'image/png');
+        res.send(finalBuffer);
+
     } catch (error) {
-        console.error('Error removing background:', error.message);
-        res.status(500).json({ error: 'Failed to remove background' });
+        console.error("Processing Error:", error);
+        res.status(500).send('Image processing failed.');
     }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
